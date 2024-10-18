@@ -1,4 +1,5 @@
-# frontendapp
+# FrontendApp
+>Need [BackendApp](https://github.com/irwansyah1998/BackendApp)
 
 ## Project setup
 ```
@@ -19,6 +20,3 @@ npm run build
 ```
 npm run lint
 ```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
