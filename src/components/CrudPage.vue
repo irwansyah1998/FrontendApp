@@ -3,7 +3,7 @@
       <h1>Manajemen Produk</h1>
       
       <!-- Form Tambah/Edit -->
-      <form @submit.prevent="isEditing ? updateItem() : addItem()">
+      <form @submit.prevent="isEditing ? updateItem() : addItem()" class="crud-form">
         <input v-model="formItem.name" placeholder="Nama Produk" required />
         <input v-model.number="formItem.price" placeholder="Harga Produk" type="number" required />
         <input v-model="formItem.description" placeholder="Deskripsi" />
@@ -11,15 +11,30 @@
         <button v-if="isEditing" @click="cancelEdit">Batal</button>
       </form>
   
-      <!-- Daftar Produk -->
-      <ul>
-        <li v-for="(product, index) in products" :key="product.id">
-          <span>{{ product.name }} - {{ product.price | currency }}</span>
-          <p>{{ product.description }}</p>
-          <button @click="editItem(product, index)">Edit</button>
-          <button @click="removeItem(product.id)">Hapus</button>
-        </li>
-      </ul>
+      <!-- Tabel Produk -->
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nama Produk</th>
+            <th>Harga</th>
+            <th>Deskripsi</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="product in products" :key="product.id">
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>Rp{{ product.price.toFixed(2) }}</td>
+            <td>{{ product.description }}</td>
+            <td>
+              <button @click="editItem(product)">Edit</button>
+              <button @click="removeItem(product.id)">Hapus</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </template>
   
@@ -29,19 +44,20 @@
   export default {
     data() {
       return {
-        products: [], // Menyimpan daftar produk dari API
+        products: [],
         formItem: { name: '', price: 0, description: '' },
         isEditing: false,
-        currentIndex: null,
         currentId: null
       };
     },
     methods: {
-      // Ambil produk dari API saat komponen di-mount
       async fetchProducts() {
         try {
           const response = await axios.get('http://backendapp.test/api/products');
-          this.products = response.data;
+          this.products = response.data.map(product => ({
+            ...product,
+            price: parseFloat(product.price) // Konversi ke angka
+          }));
         } catch (error) {
           console.error('Gagal mengambil data produk:', error);
         }
@@ -53,9 +69,8 @@
           this.resetForm();
         }
       },
-      editItem(product, index) {
+      editItem(product) {
         this.isEditing = true;
-        this.currentIndex = index;
         this.formItem = { ...product };
         this.currentId = product.id;
       },
@@ -77,13 +92,7 @@
       resetForm() {
         this.formItem = { name: '', price: 0, description: '' };
         this.isEditing = false;
-        this.currentIndex = null;
         this.currentId = null;
-      }
-    },
-    filters: {
-      currency(value) {
-        return `Rp${value.toFixed(2)}`;
       }
     },
     mounted() {
@@ -94,17 +103,17 @@
   
   <style scoped>
   .crud-page {
-    width: 300px;
+    width: 80%;
     margin: 0 auto;
   }
-  form {
+  .crud-form {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    flex-direction: column;
   }
   input {
     padding: 5px;
+    width: 100%;
   }
   button {
     padding: 5px 10px;
@@ -113,14 +122,20 @@
     border: none;
     cursor: pointer;
   }
-  ul {
-    list-style-type: none;
-    padding: 0;
+  .product-table {
+    width: 100%;
+    border-collapse: collapse;
   }
-  li {
-    margin: 10px 0;
-    padding: 5px;
-    border: 1px solid #ccc;
+  .product-table th, .product-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  .product-table th {
+    background-color: #f2f2f2;
+  }
+  .product-table td button {
+    margin-right: 5px;
   }
   </style>
   
