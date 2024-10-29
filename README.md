@@ -6,6 +6,11 @@
 npm install
 ```
 
+### Change `.env.example` to `.env`
+```
+VUE_APP_BACKEND=http://localhost:8080 //(your BackendApp address)
+```
+
 ### Compiles and hot-reloads for development
 ```
 npm run serve
