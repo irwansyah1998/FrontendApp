@@ -1,17 +1,35 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <CrudPage msg="Welcome to Your CRUD App"/>
+    <!-- Login menjadi gerbang sebelum halaman produk dapat diakses. -->
+    <LoginPage v-if="!authToken" @authenticated="handleAuthenticated" />
+    <CrudPage v-else :auth-token="authToken" @logout="logout" />
   </div>
 </template>
 
 <script>
 import CrudPage from './components/CrudPage.vue'
+import LoginPage from './components/LoginPage.vue'
 
 export default {
   name: 'App',
   components: {
-    CrudPage
+    CrudPage,
+    LoginPage
+  },
+  data() {
+    return {
+      // Memulihkan sesi browser agar pengguna tidak perlu login setiap refresh.
+      authToken: localStorage.getItem('backendapp_api_token') || ''
+    };
+  },
+  methods: {
+    handleAuthenticated(token) {
+      this.authToken = token;
+    },
+    logout() {
+      localStorage.removeItem('backendapp_api_token');
+      this.authToken = '';
+    }
   }
 }
 </script>
@@ -23,6 +41,6 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+  margin-top: 0;
 }
 </style>
