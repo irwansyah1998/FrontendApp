@@ -100,7 +100,7 @@ export default {
                 const token = this.getTokenFromResponse(response);
 
                 if (!token) {
-                    throw new Error('Token login tidak ditemukan pada respons server.');
+                    throw new Error('Login gagal. Respons server tidak valid.');
                 }
 
                 // Token disimpan hanya di browser agar request produk dapat terautentikasi.
@@ -109,7 +109,7 @@ export default {
             } catch (error) {
                 this.errorMessage = error.response
                     ? this.getErrorMessage(error)
-                    : error.message;
+                    : 'Login gagal. Periksa koneksi dan coba lagi.';
             } finally {
                 this.isLoading = false;
             }
@@ -244,7 +244,6 @@ input {
     width: 100%;
     min-height: 46px;
     padding: 0 12px;
-    box-sizing: border-box;
     box-sizing: border-box;
     border: 1px solid #cbd8d3;
     border-radius: 6px;
