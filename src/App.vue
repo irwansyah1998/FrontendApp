@@ -2,7 +2,7 @@
   <div id="app">
     <!-- Login menjadi gerbang sebelum halaman produk dapat diakses. -->
     <LoginPage v-if="!authToken" @authenticated="handleAuthenticated" />
-    <CrudPage v-else :auth-token="authToken" @logout="logout" />
+    <CrudPage v-else :auth-token="authToken" @logout="logout" @unauthorized="handleUnauthorized" />
   </div>
 </template>
 
@@ -19,16 +19,31 @@ export default {
   data() {
     return {
       // Memulihkan sesi browser agar pengguna tidak perlu login setiap refresh.
-      authToken: localStorage.getItem('backendapp_api_token') || ''
+      authToken: this.readStoredToken()
     };
   },
   methods: {
+    readStoredToken() {
+      try {
+        return localStorage.getItem('backendapp_api_token') || '';
+      } catch (error) {
+        // Mode privasi/browser policy dapat menolak storage; aplikasi tetap harus bisa dibuka.
+        return '';
+      }
+    },
     handleAuthenticated(token) {
       this.authToken = token;
     },
     logout() {
-      localStorage.removeItem('backendapp_api_token');
+      try {
+        localStorage.removeItem('backendapp_api_token');
+      } catch (error) {
+        // Token in-memory tetap dihapus di bawah meskipun storage tidak tersedia.
+      }
       this.authToken = '';
+    },
+    handleUnauthorized() {
+      this.logout();
     }
   }
 }

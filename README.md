@@ -118,10 +118,9 @@ Configure `.env` with your BackendApp address:
 VUE_APP_BACKEND=http://127.0.0.1:8000
 VUE_APP_LOGIN_ENDPOINT=/api/login
 VUE_APP_PRODUCTS_ENDPOINT=/api/products
-VUE_APP_API_TOKEN=
 ```
 
-`VUE_APP_API_TOKEN` is optional. Normally, the token is returned by the login endpoint and stored automatically by the application. Never commit `.env` or place a real secret directly in source code.
+The token is returned by the login endpoint and stored automatically by the application. Never commit `.env` or place a real secret in any `VUE_APP_*` variable: Vue CLI embeds these values into the browser bundle.
 
 ## Development
 

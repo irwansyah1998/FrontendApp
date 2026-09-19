@@ -36,13 +36,13 @@
                 <form @submit.prevent="isEditing ? updateItem() : addItem()" class="crud-form">
                     <div class="field-group">
                         <label for="product-name">Nama produk</label>
-                        <input id="product-name" v-model="formItem.name" placeholder="Contoh: Paket Starter" required />
+                        <input id="product-name" v-model.trim="formItem.name" placeholder="Contoh: Paket Starter" required />
                     </div>
                     <div class="field-group">
                         <label for="product-price">Harga</label>
                         <div class="input-prefix">
                             <span>Rp</span>
-                            <input id="product-price" v-model.number="formItem.price" placeholder="0" type="number" required />
+                            <input id="product-price" v-model.number="formItem.price" placeholder="0" type="number" min="0.01" step="0.01" required />
                         </div>
                     </div>
                     <div class="field-group field-description">
@@ -131,7 +131,7 @@ export default {
     methods: {
         // Menyatukan konfigurasi request agar token tidak pernah ditulis di source code.
         getRequestConfig() {
-            const token = this.authToken || process.env.VUE_APP_API_TOKEN;
+            const token = this.authToken;
 
             return {
                 headers: {
@@ -145,12 +145,23 @@ export default {
             const responseData = response.data;
             const products = Array.isArray(responseData)
                 ? responseData
-                : responseData.data;
+                : responseData?.data;
 
-            return Array.isArray(products) ? products.map(product => ({
-                ...product,
-                price: Number.isNaN(parseFloat(product.price)) ? 0 : parseFloat(product.price)
-            })) : [];
+            if (!Array.isArray(products)) {
+                return [];
+            }
+
+            // Abaikan record malformed agar satu respons buruk tidak merusak seluruh tabel.
+            return products
+                .filter(product => product && typeof product === 'object')
+                .map(product => {
+                    const price = Number(product.price);
+
+                    return {
+                        ...product,
+                        price: Number.isFinite(price) ? price : 0
+                    };
+                });
         },
         getErrorMessage(error, fallbackMessage) {
             const responseData = error.response?.data;
@@ -161,7 +172,27 @@ export default {
 
             return firstValidationError || responseData?.message || fallbackMessage;
         },
-        async fetchProducts() {
+        handleRequestError(error, fallbackMessage) {
+            if (error.response?.status === 401) {
+                // Token tidak valid/kedaluwarsa harus mengembalikan pengguna ke gerbang login.
+                this.$emit('unauthorized');
+            }
+
+            return this.getErrorMessage(error, fallbackMessage);
+        },
+        isFormValid() {
+            return Boolean(this.formItem.name?.trim())
+                && Number.isFinite(Number(this.formItem.price))
+                && Number(this.formItem.price) > 0;
+        },
+        getFormPayload() {
+            return {
+                name: this.formItem.name.trim(),
+                price: Number(this.formItem.price),
+                description: this.formItem.description?.trim() || ''
+            };
+        },
+        async fetchProducts(keepLoading = false) {
             this.isLoading = true;
             this.errorMessage = '';
             try {
@@ -171,27 +202,29 @@ export default {
                 );
                 this.products = this.getProductsFromResponse(response);
             } catch (error) {
-                this.errorMessage = this.getErrorMessage(error, 'Gagal mengambil data produk.');
+                this.errorMessage = this.handleRequestError(error, 'Gagal mengambil data produk.');
             } finally {
-                this.isLoading = false;
+                if (!keepLoading) {
+                    this.isLoading = false;
+                }
             }
         },
         async addItem() {
-            if (this.formItem.name && this.formItem.price > 0) {
+            if (!this.isLoading && this.isFormValid()) {
                 this.isLoading = true;
                 this.errorMessage = '';
                 this.successMessage = '';
                 try {
                     await axios.post(
                         `${process.env.VUE_APP_BACKEND}${process.env.VUE_APP_PRODUCTS_ENDPOINT || '/api/products'}`,
-                        this.formItem,
+                        this.getFormPayload(),
                         this.getRequestConfig()
                     );
-                    await this.fetchProducts();
+                    await this.fetchProducts(true);
                     this.successMessage = 'Produk berhasil ditambahkan.';
                     this.resetForm();
                 } catch (error) {
-                    this.errorMessage = this.getErrorMessage(error, 'Gagal menambahkan produk.');
+                    this.errorMessage = this.handleRequestError(error, 'Gagal menambahkan produk.');
                 } finally {
                     this.isLoading = false;
                 }
@@ -203,21 +236,21 @@ export default {
             this.currentId = product.id;
         },
         async updateItem() {
-            if (this.currentId !== null) {
+            if (!this.isLoading && this.currentId !== null && this.isFormValid()) {
                 this.isLoading = true;
                 this.errorMessage = '';
                 this.successMessage = '';
                 try {
                     await axios.put(
                         `${process.env.VUE_APP_BACKEND}${process.env.VUE_APP_PRODUCTS_ENDPOINT || '/api/products'}/${this.currentId}`,
-                        this.formItem,
+                        this.getFormPayload(),
                         this.getRequestConfig()
                     );
-                    await this.fetchProducts();
+                    await this.fetchProducts(true);
                     this.successMessage = 'Produk berhasil diperbarui.';
                     this.resetForm();
                 } catch (error) {
-                    this.errorMessage = this.getErrorMessage(error, 'Gagal memperbarui produk.');
+                    this.errorMessage = this.handleRequestError(error, 'Gagal memperbarui produk.');
                 } finally {
                     this.isLoading = false;
                 }
@@ -227,7 +260,7 @@ export default {
             this.resetForm();
         },
         async removeItem(id) {
-            if (!window.confirm('Hapus produk ini?')) {
+            if (this.isLoading || !window.confirm('Hapus produk ini?')) {
                 return;
             }
 
@@ -242,7 +275,7 @@ export default {
                 this.products = this.products.filter(product => product.id !== id);
                 this.successMessage = 'Produk berhasil dihapus.';
             } catch (error) {
-                this.errorMessage = this.getErrorMessage(error, 'Gagal menghapus produk.');
+                this.errorMessage = this.handleRequestError(error, 'Gagal menghapus produk.');
             } finally {
                 this.isLoading = false;
             }
